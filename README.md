@@ -31,3 +31,8 @@ python main.py
 | `tests/` | 확인 스크립트 (`set PYTHONPATH=.` 후 `py tests\check_track.py` 등) |
 | `gotoroad.spec`, `build_exe.bat` | exe 빌드 → `dist/` |
 | `save.json`, `settings.json` | 실행하면 생기는 저장 파일 |
+
+
+##
+claude code 코드 구현
+codex 이미지 파일 생성
