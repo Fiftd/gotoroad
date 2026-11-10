@@ -1,0 +1,29 @@
+{
+  "_comment": "노선 종류(개선 노선도 기준 4분류)와 호선별 소속·아이콘 글자. tools/gen_line_assets.py 가 이 파일로 이미지를 만든다. 굵기 단위는 맵 px(줌 1 기준).",
+  "types": {
+    "main":  {"name": "메인전철", "legend_color": "#0052A4", "pattern": "main"},
+    "city":  {"name": "도시철도", "legend_color": "#5FB8A6", "pattern": "city"},
+    "light": {"name": "경전철",   "legend_color": "#EFA25B", "pattern": "light"},
+    "trunk": {"name": "간선철도", "legend_color": "#00704A", "pattern": "trunk"}
+  },
+  "lines": {
+    "1":           {"type": "main",  "label": "1"},
+    "2":           {"type": "main",  "label": "2"},
+    "3":           {"type": "main",  "label": "3"},
+    "4":           {"type": "main",  "label": "4"},
+    "5":           {"type": "main",  "label": "5"},
+    "6":           {"type": "main",  "label": "6"},
+    "7":           {"type": "main",  "label": "7"},
+    "8":           {"type": "main",  "label": "8"},
+    "9":           {"type": "main",  "label": "9"},
+    "shinbundang": {"type": "city",  "label": "신분당"},
+    "sillim":      {"type": "light", "label": "신림선"},
+    "ui":          {"type": "light", "label": "우이\n신설"},
+    "gimpo":       {"type": "light", "label": "김포\n골드"},
+    "arex":        {"type": "trunk", "label": "공항\n철도"},
+    "gyeongui":    {"type": "trunk", "label": "경의\n중앙"},
+    "gyeongchun":  {"type": "trunk", "label": "경춘선"},
+    "suinbundang": {"type": "trunk", "label": "수인\n분당"},
+    "seohae":      {"type": "trunk", "label": "서해선"}
+  }
+}
