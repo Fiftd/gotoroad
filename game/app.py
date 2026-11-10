@@ -19,11 +19,11 @@ class App:
         self.f_button = self.font(C.FONT_BUTTON)
         self.f_small = self.font(C.FONT_SMALL)
 
-        self.map = MapData()
+        self._regions = {}               # {지역: (MapData, SignBook)} 한 번 읽으면 재사용
+        self.set_region("seoul")
         self.profile = Profile()
         self.setting = Settings()
         self.icon = self.load_icons()
-        self.signs = SignBook()          # 역 간판(필요할 때 읽음)
         from game.render.lobby_bg import LobbyBg
         self.lobby_bg = LobbyBg()        # 로비 움직이는 배경(장면이 바뀌어도 이어짐)
         from game.scenes.main_menu import MainMenu
@@ -56,9 +56,25 @@ class App:
             pygame.display.flip()
         pygame.quit()
 
+    def set_region(self, rid):
+        """지역을 바꾼다: 지도(app.map)·역 간판(app.signs)·호선 메뉴(app.line_menu)."""
+        r = C.REGIONS[rid]
+        self.region = rid
+        self.map, self.signs = self.region_data(rid)
+        self.line_menu = r["menu"]
+
+    def region_data(self, rid):
+        """(MapData, SignBook) — 지역을 바꾸지 않고 읽기만(설정 화면에서 다른 지역 호선 보기). 한 번 읽으면 재사용."""
+        if rid not in self._regions:
+            r = C.REGIONS[rid]
+            self._regions[rid] = (MapData(r["map"]), SignBook(r["signs"]))
+        return self._regions[rid]
+
     def load_icons(self):
         icons = {}
-        for lid in self.map.lines:
+        for lid in {lid for r in C.REGIONS.values() for lid, _, _ in r["menu"]}:
+            if not os.path.exists(os.path.join(C.LINE_ICONS, f"{lid}.png")):
+                continue
             on = pygame.image.load(os.path.join(C.LINE_ICONS, f"{lid}.png")).convert_alpha()
             off = pygame.image.load(os.path.join(C.LINE_ICONS, f"{lid}_locked.png")).convert_alpha()
             icons[lid] = (on, off)

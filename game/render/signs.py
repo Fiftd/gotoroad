@@ -8,8 +8,9 @@ from game import config as C
 
 
 class SignBook:
-    def __init__(self):
-        with open(os.path.join(C.STATION_SIGNS, "signs.json"), encoding="utf-8") as f:
+    def __init__(self, root=C.STATION_SIGNS):
+        self.root = root                         # 지역마다 간판 폴더가 따로 있음(서울 = station_signs/, 대구 = station_signs/daegu/)
+        with open(os.path.join(root, "signs.json"), encoding="utf-8") as f:
             self.meta = json.load(f)
         self._cache = {}                         # {(크기, 호선, 역): Surface 또는 None}
 
@@ -17,7 +18,7 @@ class SignBook:
         """size = "lg" 또는 "sm". 그 호선에 없는 역이면 None."""
         key = (size, lid, name)
         if key not in self._cache:
-            path = os.path.join(C.STATION_SIGNS, size, lid, f"{name}.png")
+            path = os.path.join(self.root, size, lid, f"{name}.png")
             self._cache[key] = pygame.image.load(path).convert_alpha() if os.path.exists(path) else None
         return self._cache[key]
 
@@ -35,7 +36,7 @@ class SignBook:
         """삼태극 기호만 따로(size = "lg" 64px / "sm" 18px)."""
         key = ("taegeuk", size)
         if key not in self._cache:
-            path = os.path.join(C.STATION_SIGNS, f"taegeuk_{size}.png")
+            path = os.path.join(self.root, f"taegeuk_{size}.png")
             self._cache[key] = pygame.image.load(path).convert_alpha()
         return self._cache[key]
 

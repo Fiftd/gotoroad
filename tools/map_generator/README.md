@@ -1,47 +1,77 @@
-# 가보는 지하철 — 게임용 맵
+# 지도 생성기
 
-서울 안쪽만 표현. 종단역은 다루지 않음. 재생성: `node tools/gen-game-map.cjs` (이 폴더에서, 외부 패키지 없음)
+게임 지도(`assets/map/<지역>/`)를 만드는 도구. 실행은 프로젝트 폴더에서. 필요: `pip install pillow numpy scipy`, 라벨 글꼴 Noto Sans CJK.
 
-## 규격
-- 화면 1080×720 × 8×8개 = 전체 맵 8640×5760 픽셀
-- 도트 1개 = 화면 4픽셀 = 실제 약 21.3m → 도트 격자 2160×1440
-- 서울이 걸친 화면 조각 46개(나머지 18개는 서울 밖이라 만들지 않음). 한 화면 ≈ 5.7×3.8km
+| 지역 | 실행 | 설정 | 원본 데이터 |
+|---|---|---|---|
+| 수도권 | `py tools/map_generator/gen_capital_map.py tools/map_generator/capital.config.json` | `capital.config.json` | `sources/capital/` |
+| 대구권 | `py tools/map_generator/gen_region_map.py tools/map_generator/daegu.config.json` | `daegu.config.json` | `sources/daegu/` |
+| 부산권 | `py tools/map_generator/gen_region_map.py tools/map_generator/busan.config.json` | `busan.config.json` | `sources/busan/` |
 
-## 파일
-| 파일 | 내용 |
-|---|---|
-| `tiles/t{열}_{행}.png` | 1080×720 화면 조각(46개). 왼쪽 위 = (열×1080, 행×720) |
-| `tiles.json` | 조각 목록·좌표 변환 정보 |
-| `seoul-dong-map.png` | 전체 도트 지도(2160×1440, 1도트=1픽셀, 서울 밖 투명) |
-| `seoul-grid.json` | 도트마다 동 번호(RLE). 그림과 같은 해상도라 판정이 어긋나지 않음 |
-| `lines/line1.json` | 1호선 단선 중심선(본선, 구로→온수, 구로→금천구청). `points`(미터), `points_px`(맵 픽셀) |
-| `network.json` | 역 목록: `transfer`(환승), `junction`(분기점), `map_px`, 소속 동·구 |
-| `lines.config.json` | 맵 규격, 팔레트, 호선별 색·구간·`enabled` |
-| `preview-full.png`, `preview-screen-seoulstation.png` | 확인용(선로·역 합성) |
+- 결과: `assets/map/<지역>/` (data.json, tiles/, tiles-labeled/, tiles-plain/, 수도권은 overview-*.png).
+- 확인용 미리보기·라벨 위치: `docs/previews/map_<지역>.png`, `map_<지역>_labels.json` (게임은 안 씀).
+- 지도를 바꾼 뒤에는 `py tools/gen_line_assets.py` 로 호선 아이콘·역 간판을 다시 만든다.
+- `seoul_legacy/`: 처음 서울 지도를 만든 예전 도구(기록용).
 
-좌표: 서울시청 기준 미터(x 동쪽, y 남쪽). `map_px = (좌표_m − origin_m) / m_per_dot × dot_px`.
-선로와 역은 조각에 그려져 있지 않음 — 게임에서 `line*.json`을 읽어 호선별로 그림(선택한 호선만 표시 가능).
+## 대구권 지도 (gen_region_map.py)
+예전 서울 생성기(seoul_legacy/ 의 gen-game-map.cjs + add-district-labels.py)를 파이썬 하나로 옮긴 지역용 생성기. 축척·팔레트·라벨 규칙은 서울과 같음.
 
-## 주의
-- 동 경계: SGIS/vuski admdongkor 2026-10-01. 서울시 지도 서비스 경계와의 일치는 미검증.
-- 선로: Esri Korea 공개 서비스(2026-04-30)에서 복선을 하나로 합친 중심선.
-- **추정 구간:** 회기~청량리 사이 약 961m는 공개 선형이 끊겨 직선으로 이었음(`estimated_spans_m`). 실제 선로 형상 아님.
-- 환승 판정은 같은 이름의 역이 둘 이상의 호선에 있을 때 자동. 지금은 1호선뿐이라 환승역 0개.
+- 실행: `py tools/map_generator/gen_region_map.py tools/map_generator/daegu.config.json` (pip install pillow numpy scipy, 라벨 글꼴 Noto Sans CJK)
+  → `assets/map/daegu/` (data.json, tiles/, tiles-labeled/, tiles-plain/)
+- 그다음 `py tools/gen_line_assets.py` → 대구 호선 아이콘(d1~d3)·열차·역 간판(`assets/ui/station_signs/daegu/`)
+- 범위: 대구 도시철도 1·2·3호선 선로 바깥으로 2.6 km 여유. 화면 7×6개(7560×4320 px), 조각 41개.
+- 호선 id: d1(1호선, 설화명곡~하양 37.5 km, 36역), d2(2호선, 문양~영남대 31.4 km, 29역), d3(3호선 모노레일, 칠곡경대병원~용지 23.0 km, 30역). 환승역: 반월당·명덕·청라언덕.
+- 구간 길이: OSM 선로 중심선을 따라 계산한 값(공식 역간 거리와 조금 다를 수 있음).
+- 한강처럼 강을 따로 그리지 않음(금호강·신천 없음).
 
-## 호선 추가
-1. 해당 호선의 역·선로 데이터를 `data.js`와 같은 형식으로 준비(생성기는 현재 1호선만 읽으므로 입력 로더를 호선별로 확장해야 함).
-2. `lines.config.json`의 `lines`에 `id`, `name`, `color`, `segments`(역 이름 순서 배열, 분기마다 구간 추가) 항목을 넣고 `enabled: true`.
-3. 재생성하면 환승역·분기점이 `network.json`에 자동 반영.
+### 출처 (대구권)
+| 자료 | 파일 | 출처 · 라이선스 |
+|---|---|---|
+| 행정동 경계 | `sources/daegu/daegu_dongs.geojson` (대구광역시, 군위군 제외 + 경상북도 경산시) | [vuski/admdongkor](https://github.com/vuski/admdongkor) ver20261001, CC BY 4.0 · 원자료 통계청 SGIS(공공누리 제1유형) |
+| 선로 중심선·역 위치 | `sources/daegu/daegu_lines.geojson`, `daegu_stations.geojson` | © OpenStreetMap contributors, ODbL — [plazalabs/kr-rail-map](https://github.com/plazalabs/kr-rail-map) 정리본(Geofabrik 2026-10-09 추출) |
 
-## 라벨 (구·동·한강)
-- `python3 tools/add-district-labels.py` → `tiles-labeled/`(글자가 얹힌 조각 46개)와 `labels.json`(`districts`, `dongs`, `river` 라벨 위치) 생성.
-- 투명도 환경변수: `GU_ALPHA`(구 이름, 기본 0.40), `DONG_ALPHA`(동 이름, 기본 0.15), `RIVER_ALPHA`(한강, 기본 0.45), `GU_DOTS`(구 글자 크기, 기본 15도트).
-- 동 이름은 각 동 안쪽에 맞춰 글자 크기(24→10px)와 줄바꿈(`·` 또는 중간)을 자동 조절. 아주 작은 동은 일부 넘칠 수 있음.
-- `tiles/`는 라벨 없는 원본. 게임에서 직접 글자를 그리려면 `tiles/` + `labels.json`을 쓰면 됨.
+## 수도권 지도 (gen_capital_map.py)
+예전 서울 지도(`sources/capital/seoul_base_data.json`)는 그대로 두고, 서울 밖 인천·경기 근교 구간을 OpenStreetMap 선로·역으로 이어 붙인 큰 지도.
 
-## 구·동 경계, 한강
-- 동 경계: 각 동 색보다 살짝 진한 연한 1도트 선.
-- 구 경계: 검정(`map.gu_border_color`, 기본 `#111111`) 선, 구마다 안쪽으로 `map.gu_border_dots`(기본 1도트) → 경계에서 약 8px. `gu_palette`는 더 이상 쓰지 않음.
-- **한강(근사):** 행정구역 경계가 강 수면을 포함하므로, `river.crossing_pairs`에 적은 구 쌍의 경계선을 강 중심선으로 삼고 `river.half_width_m`(420m → 폭 약 840m)로 칠함. 서울 서쪽(강서구)·동쪽(강동구) 끝은 서울 외곽선을 따라 `outer_extensions`로 연장하고 `outer_width_factor`(1.7)만큼 넓힘. 실제 강둑 폴리곤이 아니므로 폭·모양은 근사. 실제 하천 폴리곤을 구하면 교체 가능.
-- `seoul-grid.json`: `gus`, `dongs[].gu_i`, `river_rle`(한강 도트) 포함.
-- 바꾼 뒤에는 `node tools/gen-game-map.cjs` → `python3 tools/add-district-labels.py` 순서로 실행.
+- 실행: `py tools/map_generator/gen_capital_map.py tools/map_generator/capital.config.json` (pip install pillow numpy scipy, 라벨 글꼴 Noto Sans CJK)
+  → `assets/map/capital/` (data.json, tiles/, tiles-labeled/, tiles-plain/, overview-*.png)
+- 그다음 `py tools/gen_line_assets.py` → 새 역 간판(서울 간판 폴더에 함께), 인천1·2호선 아이콘.
+- 게임의 수도권 지도(`config.MAP_DATA`). 예전 서울만 있던 지도는 지웠다.
+- 범위: 서울시청 기준 서 33 km · 동 30 km · 북 30 km · 남 40 km. 화면 12×19개(12960×13680 px), 조각 227개.
+  기존 서울 지도가 조각 단위로 그대로 밀리도록 맞춤 → 서울 좌표는 (+2160, +2880) px 평행 이동만.
+- 좌표 맞추기: OSM 역(웹 메르카토르 × cos 37.5665°)과 기존 서울 역의 차이 중앙값으로 평행 이동(축척 같음). 차이 중앙값 25 m.
+- 노선 잇기: 호선마다 OSM 선로를 20 m 간격 그래프로 만들고(끊긴 곳은 600 m 이내 이음), 역을 선로 위로 붙인 뒤
+  선로를 따라 잰 거리로 '사이에 다른 역이 없는' 역 쌍만 이웃으로 삼는다. 서울 안 구간(두 역 다 기존 역)은 기존 데이터를 그대로 쓴다.
+  세 역이 서로 다 이어지면 가장 긴 쪽(역이 아닌 갈림목을 거친 쌍)을 버린다. 예외는 config `drop_edges`(1호선 석수–광명).
+- 갈림길(switches): 새로 생긴 갈림역은 선로 각도(100° 미만)로 갈 수 있는 방향을 정함(금천구청: 광명 ↔ 독산만).
+- 서울 밖 노선: 1호선(덕계·서동탄·인천·광명), 3호선(대화), 4호선(진접·오이도), 5호선(하남검단산), 7호선(장암·석남), 8호선(별내·모란),
+  공항철도(청라국제도시), 경의중앙선(파주·양수), 경춘선(마석), 수인분당선(인천), 신분당선(광교), 김포골드라인(양촌), 서해선(일산~원시),
+  인천1호선(검단호수공원~송도달빛축제공원), 인천2호선(검단오류~운연). 범위 밖으로 나가는 구간은 경계 안쪽 마지막 역에서 끊음.
+- 한강: 구 경계를 강 중앙선으로 보고 폭 840 m 로 근사(서울 + 고양·김포·구리·하남·남양주 경계). 임진강·안양천 등은 없음.
+- 큰 지도라 게임은 조각을 화면에 보일 때만 읽고(최근 48개만 메모리에), 멀리서 볼 때는 1/4 축소 그림(overview-*.png)으로 그린다.
+- 서울 안을 OSM 으로 새로 그리는 설정(`seoul_source: "osm"`)도 있지만, OSM 선로가 서울 안에서 수 km 씩 끊겨 있어(예: 2호선) 쓰지 않는다.
+
+### 출처 (수도권)
+| 자료 | 파일 | 출처 · 라이선스 |
+|---|---|---|
+| 서울 안 선로·역 | `sources/capital/seoul_base_data.json` (= 예전 `assets/map/data.json`) | 기존 서울 지도(Esri Korea 공개 서비스 선로, 행정동 SGIS/vuski) |
+| 서울 밖 선로 중심선·역 위치 | `sources/capital/capital_lines.geojson`, `capital_stations.geojson` | © OpenStreetMap contributors, ODbL — [plazalabs/kr-rail-map](https://github.com/plazalabs/kr-rail-map) 정리본(Geofabrik 2026-10-09 추출) |
+| 행정동 경계 | `sources/capital/capital_dongs.geojson` (서울특별시·인천광역시·경기도 중 범위 안) | [vuski/admdongkor](https://github.com/vuski/admdongkor) ver20261001, CC BY 4.0 · 원자료 통계청 SGIS(공공누리 제1유형) |
+
+## 부산권 지도 (gen_region_map.py)
+대구와 같은 생성기. 한 호선이 여러 조각으로 끊겨 있으면 끝점끼리 이어 한 줄로 만든다(빈 곳은 직선, 부산 2·3호선).
+`exclude_stations` 로 승객이 타지 않는 정차점을 뺀다(부산 4호선 안평기지간이).
+
+- 실행: `py tools/map_generator/gen_region_map.py tools/map_generator/busan.config.json` → `assets/map/busan/`
+- 그다음 `py tools/gen_line_assets.py` → 아이콘(b1~b4, bgl)·역 간판(`assets/ui/station_signs/busan/`)
+- 부산권: 화면 6×10개(6480×7200 px), 조각 57개. 범위는 부산광역시 + 경남 양산시·김해시.
+  b1(1호선, 노포~다대포해수욕장 39.6 km, 40역), b2(2호선, 양산~장산 48.7 km, 43역), b3(3호선, 대저~수영 18.1 km, 17역),
+  b4(4호선, 미남~안평 11.8 km, 14역), bgl(부산김해경전철, 사상~가야대 22.5 km, 21역).
+  환승역: 서면·연산·동래·덕천·사상·수영·대저·미남. 동해선(광역전철)은 넣지 않음.
+- 구간 길이: OSM 선로를 따라 잰 값. 선로가 끊긴 곳은 직선으로 이어서 공식 거리와 조금 다를 수 있음(부산 2호선 공식 45.2 km).
+
+### 출처 (부산권)
+| 자료 | 파일 | 출처 · 라이선스 |
+|---|---|---|
+| 행정동 경계 | `sources/busan/busan_dongs.geojson` (부산광역시 + 경남 양산시·김해시) | [vuski/admdongkor](https://github.com/vuski/admdongkor) ver20261001, CC BY 4.0 · 원자료 통계청 SGIS(공공누리 제1유형) |
+| 선로 중심선·역 위치 | `sources/busan/busan_lines.geojson`, `busan_stations.geojson` | © OpenStreetMap contributors, ODbL — [plazalabs/kr-rail-map](https://github.com/plazalabs/kr-rail-map) 정리본(Geofabrik 2026-10-09 추출) |

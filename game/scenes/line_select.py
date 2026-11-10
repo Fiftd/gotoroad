@@ -22,8 +22,9 @@ class LineSelect(Scene):
 
     def __init__(self, app):
         super().__init__(app)
-        self.names = {lid: name for lid, name, _ in C.LINE_MENU}
-        self.starts = {lid: start for lid, _, start in C.LINE_MENU}
+        self.title = f"호선 선택 · {C.REGIONS[app.region]['name']}"
+        self.names = {lid: name for lid, name, _ in app.line_menu}
+        self.starts = {lid: start for lid, _, start in app.line_menu}
         self.rows = self.make_rows()
         self.cells = {}
         self.back = Button("뒤로가기")
@@ -61,7 +62,7 @@ class LineSelect(Scene):
         lines = self.app.map.lines
         rows = []
         
-        ids = [lid for lid, _, _ in C.LINE_MENU ]
+        ids = [lid for lid, _, _ in self.app.line_menu]
         for i in range(0, len(ids), COLS):
             chunk = ids[i:i + COLS]
             rows.append(chunk+ [None] * (COLS - len(chunk)))

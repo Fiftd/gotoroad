@@ -1,7 +1,8 @@
 """Line — 호선(이름, 색, 구간, 역 순서)."""
 
 SHORT = {"arex": "공", "gyeongui": "경", "gyeongchun": "춘", "suinbundang": "분",
-         "shinbundang": "신", "sillim": "림", "ui": "우", "gimpo": "김", "seohae": "서"}
+         "shinbundang": "신", "sillim": "림", "ui": "우", "gimpo": "김", "seohae": "서",
+         "incheon1": "인", "incheon2": "인", "bgl": "김"}
 
 def hexToRGB(h):
     return tuple(int(h[i:i+2], 16) for i in (1, 3, 5))

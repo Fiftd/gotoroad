@@ -12,7 +12,7 @@
   해당 게임은 픽셀 배경.
 ```
 메인 메뉴 ─ 지하철 ─→ 권역 선택 ─ 수도권 ─→ 호선 선택 ─ 호선 클릭 ─→ 지하철 플레이
-          ├ 버스 (미구현, 비활성)   ├ 대구/대전/부산권 (미구현)        │  ESC
+          ├ 버스 (미구현, 비활성)   ├ 대구/부산권                   │  ESC
           ├ 기차 (미구현, 비활성)   └ 뒤로                              └→ 호선 선택으로
           └ 설정 ─→ 설정 ─ 지하철 › ─→ 호선별 표시 on/off
 ```
@@ -159,7 +159,7 @@
 - ESC를 누르면 종료
 
 ### `region_select.py` (원본에 없음, 기획서 기준)
-- 수도권 / 대구권·대전권·부산권(비활성) / 뒤로
+- 수도권 / 대구권 / 부산권 / 뒤로
 
 ### `line_select.py`
 **원본:** `main.py › LineSelect` (원본은 글자 버튼. 새 구조에서는 호선 아이콘으로 바꾼다)
@@ -247,7 +247,7 @@
 ### `map_data.py`
 **원본:** `Maps/data.json`, `Maps/game_map.py › Game.__init__`
 
-`assets/map/data.json`의 구조:
+`assets/map/<지역>/data.json`의 구조(수도권 `capital`, 대구 `daegu`, 부산 `busan` 모두 같음):
 ```
 screen_px [1080,720]   타일 하나 크기
 map_px    [8640,5760]  전체 맵
@@ -571,11 +571,11 @@ idle ──SPACE 누름──→ charging ──SPACE 뗌──→ run ──도
 
 | 원본 (gago-road-draft) | 새 위치 (gotoroad) |
 |---|---|
-| `Maps/data.json` | `assets/map/data.json` |
-| `Maps/tiles/`, `tiles-labeled/`, `tiles-plain/` | `assets/map/` 아래 같은 이름 |
-| `Maps/build_lines.py` (호선 JSON → data.json) | `tools/` |
-| `Claude outputs/*` (맵 생성기, 라벨 생성기, 설정) | `tools/` |
-| `Claude outputs/README.md`, `Maps/README.md` | `docs/` (맵 규격·좌표계 설명) |
+| `Maps/data.json` | `assets/map/data.json` → 지금은 `tools/map_generator/sources/capital/seoul_base_data.json` (수도권 지도의 서울 부분) |
+| `Maps/tiles/`, `tiles-labeled/`, `tiles-plain/` | 지움 — `assets/map/capital/` 의 조각으로 대체 |
+| `Maps/build_lines.py` (호선 JSON → data.json) | `tools/map_generator/seoul_legacy/` |
+| `Claude outputs/*` (맵 생성기, 라벨 생성기, 설정) | `tools/map_generator/seoul_legacy/` |
+| `Claude outputs/README.md`, `Maps/README.md` | `tools/map_generator/seoul_legacy/README.md`, `README_maps.md` |
 | `가고싶은길.md` | `docs/` |
 | `settings.json`, `save.json` | 옮기지 않음(실행하면 새로 만들어짐) |
 
@@ -593,7 +593,7 @@ idle ──SPACE 누름──→ charging ──SPACE 뗌──→ run ──도
 | `assets/ui/station_signs/{lg,sm}/transfer/{역}.png` | 환승역 간판(삼태극 + 검은 테두리, lg 는 아래에 지나는 호선 기호). 81곳 |
 | `assets/ui/station_signs/taegeuk_lg.png`, `taegeuk_sm.png` | 삼태극 기호만 따로(64 / 18). 선택 연출의 뒤집기용 |
 | `assets/ui/station_signs/signs.json` | 간판 안 호선 기호의 중심 좌표·크기(lg, sm), 호선별 역 목록, `transfer`: {환승역: [운행 호선]} |
-| `docs/line_assets_preview.png`, `docs/train_preview.png`, `docs/sign_preview.png` | 확인용 요약 이미지 |
+| `docs/previews/line_assets_preview.png`, `train_preview.png`, `sign_preview.png` | 확인용 요약 이미지 (지도 미리보기 `map_<지역>.png` 도 여기) |
 
 ---
 
@@ -651,3 +651,27 @@ idle ──SPACE 누름──→ charging ──SPACE 뗌──→ run ──도
 - 플레이: Q~F·← → 입력이 실제로 받아질 때 `qwer_sound`, 첫 방문 크래시 `crash`, 역 도착마다 `jump`, 미니게임 실패 `fail`,
   충전 중 반복 `charging`(놓으면 멈춤), 네비 길 없음 `error`(새로 찾았을 때 한 번).
 - config: `SOUND_DIR`, `SFX_VOLUME` 0.7, `MUSIC_VOLUME` 0.4.
+
+### 지역: 대구권 (구현됨)
+- 지역 선택 → 대구권 → 호선 선택(대구 1·2·3호선) → 플레이. 서울과 같은 화면·규칙·네비게이션.
+- `config.REGIONS` = {지역: 이름, 지도(data.json), 역 간판 폴더, 호선 메뉴}. `App.set_region(rid)` 가 `app.map`·`app.signs`·`app.line_menu` 를 바꿈(한 번 읽은 지역은 재사용).
+- 대구 호선 id: d1·d2·d3 (아이콘·열차·간판 파일 이름이 서울과 겹치지 않게). d1 무료(`FREE_LINES`), d2·d3 는 Point 해금. 출발역: 중앙로 / 반월당 / 서문시장.
+- `MapData.dir` 로 지도 조각 폴더, `SignBook(root)` 로 간판 폴더를 지역마다 따로 씀. 설정 > 지하철은 지금 고른 지역의 호선을 보여 줌.
+- 지도 생성: `tools/map_generator/gen_region_map.py` + `daegu.config.json`. 출처는 tools/map_generator/README.md.
+
+### 지역: 수도권 확장 (구현됨)
+- 수도권 지도 = 서울 + 인천·경기 근교(서울시청 기준 서 33·동 30·북 30·남 40 km). `assets/map/capital/data.json`, 화면 12×19개, 역 560개.
+- 서울 안은 기존 지도 그대로(좌표만 +2160, +2880 px), 서울 밖은 OpenStreetMap. 생성: `tools/map_generator/gen_capital_map.py` + `capital.config.json`.
+- `config.MAP_DATA` = `assets/map/capital/data.json` (`REGIONS["seoul"]["map"]`). 예전 서울만 있던 지도는 지움. 호선 메뉴에 김포골드라인·서해선(김포공항), 인천1호선(부평), 인천2호선(주안) 추가 → 20개.
+- 새 갈림역: 금천구청(1호선 광명 지선). 서울 밖 끝역: 덕계·서동탄·인천·광명·대화·진접·오이도·하남검단산·장암·석남·별내·모란·청라국제도시·파주·양수·마석·광교·양촌·일산·원시 등.
+- 렌더러: 조각을 보일 때만 읽음(`TILE_CACHE` 48개), 확대가 작으면 1/4 축소 그림(`overview`)으로 그림(`OVERVIEW_SWITCH`).
+
+### 지역: 부산권 (구현됨)
+- 지역 선택 → 부산권 → 호선 선택 → 플레이. 대구와 같은 구조(`REGIONS["busan"]`).
+- 부산: b1(서면)·b2(서면)·b3(연산)·b4(미남)·bgl 부산김해경전철(사상). 무료: b1 (`FREE_LINES`). 나머지는 Point 해금.
+- 지도: `assets/map/busan/` — `gen_region_map.py` + `busan.config.json`. 출처는 tools/map_generator/README.md.
+- 대전권은 넣었다가 뺐음(지역 선택에 버튼 없음).
+
+### 설정 > 지하철: 지역 넘기기
+- 제목 `< 설정 > 지하철 (수도권) >` — 양옆 < > 버튼(또는 ← → 키)으로 수도권 → 대구권 → 부산권을 돌아가며 그 지역 호선 On/OFF 를 바꿈.
+- 게임에서 고른 지역(app.region)은 바뀌지 않음. 다른 지역 지도는 `App.region_data(rid)` 로 읽기만 함. 초기화 버튼은 모든 지역 공통.

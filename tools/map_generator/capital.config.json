@@ -1,0 +1,225 @@
+{
+ "_comment": "gen_capital_map.py 설정 — 서울 지도(기존 Esri Korea 선로·역)를 그대로 두고 서울 밖 수도권 구간을 OpenStreetMap 으로 이어 붙인다. seoul_source 를 'osm' 으로 하면 서울도 OSM 으로 그리지만, OSM 선로가 서울 안에서 수 km 씩 끊겨 있어 쓰지 않는다. 범위는 서울시청 기준 km.",
+ "base_data": "sources/capital/seoul_base_data.json",
+ "dongs": "sources/capital/capital_dongs.geojson",
+ "lines_geojson": "sources/capital/capital_lines.geojson",
+ "stations_geojson": "sources/capital/capital_stations.geojson",
+ "out": "capital",
+ "anchor_station": "시청",
+ "extent_km": {
+  "w": 33,
+  "e": 30,
+  "n": 30,
+  "s": 40
+ },
+ "join_radius_m": 30,
+ "max_snap_m": 400,
+ "match_existing_m": 600,
+ "same_station_m": 800,
+ "lines": [
+  {
+   "id": "1",
+   "src": "seoul-metropolitan-subway-line-1"
+  },
+  {
+   "id": "2",
+   "src": "seoul-subway-line-2"
+  },
+  {
+   "id": "3",
+   "src": "seoul-metro-line-3"
+  },
+  {
+   "id": "4",
+   "src": "seoul-metropolitan-subway-line-4"
+  },
+  {
+   "id": "5",
+   "src": "seoul-subway-line-5"
+  },
+  {
+   "id": "6",
+   "src": "seoul-subway-line-6"
+  },
+  {
+   "id": "7",
+   "src": "seoul-subway-line-7"
+  },
+  {
+   "id": "8",
+   "src": "seoul-subway-line-8"
+  },
+  {
+   "id": "9",
+   "src": "seoul-subway-line-9"
+  },
+  {
+   "id": "arex",
+   "src": "arex"
+  },
+  {
+   "id": "gyeongui",
+   "src": "gyeongui-jungang-line"
+  },
+  {
+   "id": "gyeongchun",
+   "src": "seoul-metropolitan-subway-gyeongchun-line"
+  },
+  {
+   "id": "suinbundang",
+   "src": "suin-bundang-line"
+  },
+  {
+   "id": "shinbundang",
+   "src": "seoul-metropolitan-subway-shinbundang-line"
+  },
+  {
+   "id": "sillim",
+   "src": "sillim-line"
+  },
+  {
+   "id": "ui",
+   "src": "ui-sinseol-line"
+  },
+  {
+   "id": "gimpo",
+   "src": "gimpo-goldline"
+  },
+  {
+   "id": "seohae",
+   "src": "seoul-metropolitan-subway-seohae-line"
+  },
+  {
+   "id": "incheon1",
+   "src": "incheon-subway-line-1",
+   "name": "인천1호선",
+   "color": "#7CA8D5",
+   "new": true
+  },
+  {
+   "id": "incheon2",
+   "src": "incheon-subway-line-2",
+   "name": "인천2호선",
+   "color": "#ED8B00",
+   "new": true
+  }
+ ],
+ "gu_border_color": "#111111",
+ "plain_fill": [
+  238,
+  240,
+  236
+ ],
+ "plain_edge": [
+  96,
+  106,
+  118
+ ],
+ "dong_palette": [
+  "#e3eaf5",
+  "#e2ece9",
+  "#eee8dc",
+  "#e9e4ef",
+  "#e2ebee",
+  "#eee4e1",
+  "#e8ecd9",
+  "#f0e3ea"
+ ],
+ "river": {
+  "name": "한강",
+  "half_width_m": 420,
+  "color": "#8bb9e2",
+  "edge_color": "#5f95c7",
+  "crossing_pairs": [
+   [
+    "마포구",
+    "영등포구"
+   ],
+   [
+    "마포구",
+    "강서구"
+   ],
+   [
+    "용산구",
+    "영등포구"
+   ],
+   [
+    "용산구",
+    "동작구"
+   ],
+   [
+    "용산구",
+    "서초구"
+   ],
+   [
+    "성동구",
+    "강남구"
+   ],
+   [
+    "성동구",
+    "서초구"
+   ],
+   [
+    "광진구",
+    "강남구"
+   ],
+   [
+    "광진구",
+    "송파구"
+   ],
+   [
+    "광진구",
+    "강동구"
+   ],
+   [
+    "용산구",
+    "강남구"
+   ],
+   [
+    "강서구",
+    "고양시덕양구"
+   ],
+   [
+    "고양시덕양구",
+    "김포시"
+   ],
+   [
+    "고양시일산동구",
+    "김포시"
+   ],
+   [
+    "고양시일산서구",
+    "김포시"
+   ],
+   [
+    "김포시",
+    "파주시"
+   ],
+   [
+    "강동구",
+    "구리시"
+   ],
+   [
+    "구리시",
+    "하남시"
+   ],
+   [
+    "남양주시",
+    "하남시"
+   ],
+   [
+    "강동구",
+    "남양주시"
+   ]
+  ]
+ },
+ "seoul_source": "keep",
+ "drop_edges": {
+  "1": [
+   [
+    "석수",
+    "광명"
+   ]
+  ]
+ }
+}

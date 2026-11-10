@@ -1,6 +1,7 @@
-"""assets/map/data.json 로드, 좌표 변환."""
+"""지역 지도(assets/map/<지역>/data.json) 로드, 좌표 변환."""
 
 import json
+import os
 
 from game import config as C
 from game.world.line import Line
@@ -14,10 +15,12 @@ def _load_json (path):
 class MapData:
     def __init__(self, path=C.MAP_DATA, types_path=C.LINE_TYPES):
         D = _load_json(path)
+        self.dir = os.path.dirname(path)            # 지도 조각 폴더(tiles, tiles-labeled, tiles-plain)가 있는 곳
 
         self.w, self.h = D["map_px"]
         self.tile_w, self.tile_h = D["screen_px"]
         self.tiles = D["tiles"]
+        self.overview = D.get("overview")          # 전체 축소 그림(큰 지도만)
 
         types = _load_json(types_path).get("lines", {})
         self.lines = {}

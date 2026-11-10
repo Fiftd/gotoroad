@@ -3,7 +3,7 @@
   "types": {
     "main":  {"name": "메인전철", "legend_color": "#0052A4", "pattern": "main"},
     "city":  {"name": "도시철도", "legend_color": "#5FB8A6", "pattern": "city"},
-    "light": {"name": "경전철",   "legend_color": "#EFA25B", "pattern": "light"},
+    "light": {"name": "경전철", "legend_color": "#EFA25B", "pattern": "light"},
     "trunk": {"name": "간선철도", "legend_color": "#00704A", "pattern": "trunk"}
   },
   "lines": {
@@ -24,6 +24,16 @@
     "gyeongui":    {"type": "trunk", "label": "경의\n중앙"},
     "gyeongchun":  {"type": "trunk", "label": "경춘선"},
     "suinbundang": {"type": "trunk", "label": "수인\n분당"},
-    "seohae":      {"type": "trunk", "label": "서해선"}
+    "seohae":      {"type": "trunk", "label": "서해선"},
+    "d1":          {"type": "main",  "label": "1"},
+    "d2":          {"type": "main",  "label": "2"},
+    "d3":          {"type": "light", "label": "3"},
+    "incheon1":    {"type": "main",  "label": "인천\n1"},
+    "incheon2":    {"type": "light", "label": "인천\n2"},
+    "b1":          {"type": "main",  "label": "1"},
+    "b2":          {"type": "main",  "label": "2"},
+    "b3":          {"type": "main",  "label": "3"},
+    "b4":          {"type": "light", "label": "4"},
+    "bgl":         {"type": "light", "label": "부산\n김해"}
   }
 }

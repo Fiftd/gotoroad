@@ -4,12 +4,17 @@
 """
 import os
 import random
+import sys
 
 # ---------------- 경로 ----------------
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# exe(PyInstaller)로 실행하면 assets 는 exe 에 묶인 폴더(sys._MEIPASS)에서 읽고,
+# 저장 파일(save.json·settings.json)은 exe 옆에 쓴다. 파이썬으로 실행하면 둘 다 프로젝트 폴더.
+FROZEN = getattr(sys, "frozen", False)
+ROOT = getattr(sys, "_MEIPASS", "") if FROZEN else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.dirname(sys.executable) if FROZEN else ROOT
 ASSETS = os.path.join(ROOT, "assets")
 MAP_DIR = os.path.join(ASSETS, "map")
-MAP_DATA = os.path.join(MAP_DIR, "data.json")
+MAP_DATA = os.path.join(MAP_DIR, "capital", "data.json")   # 수도권(서울 + 인천·경기 근교) — tools/map_generator/gen_capital_map.py
 LINE_TYPES = os.path.join(MAP_DIR, "line_types.json")
 LINE_ICONS = os.path.join(ASSETS, "ui", "line_icons")
 TRAIN_SPRITES = os.path.join(ASSETS, "sprites", "trains")
@@ -19,8 +24,8 @@ LOBBY_BG = os.path.join(MAP_DIR, "subway_bg_30s.gif")   # 로비 움직이는 �
 SOUND_DIR = os.path.join(ASSETS, "sound")
 SFX_VOLUME = 0.7           # 효과음 크기(0~1)
 MUSIC_VOLUME = 0.4         # 배경음악 크기(0~1)
-SAVE_FILE = os.path.join(ROOT, "save.json")
-SETTINGS_FILE = os.path.join(ROOT, "settings.json")
+SAVE_FILE = os.path.join(DATA_DIR, "save.json")
+SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
 
 # ---------------- 창 ----------------
 TITLE = "가고 싶은 길"
@@ -112,7 +117,7 @@ LINE_PARALLEL = True        # 같은 두 역을 잇는 호선이 여럿이면 �
 POINT_FIRST_STATION = 200
 POINT_NORMAL_STATION = 20
 UNLOCK_BASE_PRICE = 1000    # N번째 구매 가격 = 1000 × N
-FREE_LINES = ("1", "2", "3", "4")
+FREE_LINES = ("1", "2", "3", "4", "d1", "b1")   # 대구·부산 1호선도 무료
 SAVE_VERSION = 2
 
 # ---------------- 호선 메뉴 ----------------
@@ -133,9 +138,37 @@ LINE_MENU = [
     ("suinbundang", "수인분당선", "왕십리"),
     ("shinbundang", "신분당선", "강남"),
     ("sillim", "신림선", "보라매"),
-    ("ui", "우이신설선", "신설동")
+    ("ui", "우이신설선", "신설동"),
+    ("gimpo", "김포골드라인", "김포공항"),
+    ("seohae", "서해선", "김포공항"),
+    ("incheon1", "인천1호선", "부평"),
+    ("incheon2", "인천2호선", "주안"),
 ]
-START_STATION = {lid: start for lid, _, start in LINE_MENU}
+# 대구권: 호선 id 는 서울과 겹치지 않게 d1·d2·d3 (아이콘·간판 파일 이름도 이 id)
+DAEGU_LINE_MENU = [
+    ("d1", "1호선", "중앙로"),
+    ("d2", "2호선", "반월당"),
+    ("d3", "3호선", "서문시장"),
+]
+
+# 부산권: b1~b4, 부산김해경전철(bgl)
+BUSAN_LINE_MENU = [
+    ("b1", "1호선", "서면"),
+    ("b2", "2호선", "서면"),
+    ("b3", "3호선", "연산"),
+    ("b4", "4호선", "미남"),
+    ("bgl", "부산김해경전철", "사상"),
+]
+
+# 지역(권역) — 지도·역 간판 폴더와 호선 메뉴. 지역 선택 화면에서 고른다.
+REGIONS = {
+    "seoul": {"name": "수도권", "map": MAP_DATA, "signs": STATION_SIGNS, "menu": LINE_MENU},
+    "daegu": {"name": "대구권", "map": os.path.join(MAP_DIR, "daegu", "data.json"),
+              "signs": os.path.join(STATION_SIGNS, "daegu"), "menu": DAEGU_LINE_MENU},
+    "busan": {"name": "부산권", "map": os.path.join(MAP_DIR, "busan", "data.json"),
+              "signs": os.path.join(STATION_SIGNS, "busan"), "menu": BUSAN_LINE_MENU},
+}
+START_STATION = {lid: start for r in REGIONS.values() for lid, _, start in r["menu"]}
 
 def roll_charge_bonus(rng=random):
     """에너지 바가 MAX(1000)에 닿을 때 한 번 뽑는 배율: 1.0 ~ 1.3 (0~30% 추가 에너지)."""

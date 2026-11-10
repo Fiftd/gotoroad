@@ -7,3 +7,6 @@ venv/
 !.env.example
 /save.json
 /settings.json
+/build/
+/dist/
+error.log

@@ -4,7 +4,8 @@
 
 입력
   assets/map/line_types.json   노선 종류와 호선별 종류·아이콘 글자
-  assets/map/data.json         호선 색 (없으면 아래 FALLBACK_COLORS 사용)
+  assets/map/capital/data.json 수도권 호선 색·역 → 간판은 station_signs/ 바로 아래 (없으면 FALLBACK_COLORS)
+  assets/map/<지역>/data.json  다른 지역(대구 등)의 호선 색·역 → 그 지역 간판은 station_signs/<지역>/ 에
   assets/font/neodgm.ttf       픽셀 폰트
 
 출력
@@ -13,7 +14,7 @@
   assets/map/line_patterns/{type}.png    선 무늬 타일. 가로로 반복해서 선을 따라 찍는다.
                                          검정(0,0,0) = 호선 색으로 바꿀 자리, 흰색 = 흰색 그대로, 투명 = 비움
   assets/ui/line_types/{type}.png        범례용 선 견본 (종류 대표색, 160×28)
-  docs/line_assets_preview.png           확인용 한 장 요약
+  docs/previews/*_preview.png            확인용 요약(아이콘·열차·간판)
 """
 import json
 import math
@@ -27,7 +28,10 @@ P = lambda *a: os.path.join(ROOT, *a)
 FALLBACK_COLORS = {"1": "#0052A4", "2": "#00A84D", "3": "#EF7C1C", "4": "#29B6F6", "5": "#8E44AD", "6": "#8B4513",
                    "7": "#7F8C00", "8": "#E91E63", "9": "#B59A5B", "arex": "#00296B", "gyeongui": "#00C9A7",
                    "gyeongchun": "#0B7A75", "suinbundang": "#FFD600", "shinbundang": "#E53935", "sillim": "#7C8CF8",
-                   "ui": "#B5CC18", "gimpo": "#AD8605", "seohae": "#8FC31F"}
+                   "ui": "#B5CC18", "gimpo": "#AD8605", "seohae": "#8FC31F",
+                   "incheon1": "#7CA8D5", "incheon2": "#ED8B00",
+                   "b1": "#F06A00", "b2": "#81BF48", "b3": "#BB8C00", "b4": "#217DCB", "bgl": "#8652A1",
+                   "d1": "#D93F5C", "d2": "#00AA80", "d3": "#FFB100"}
 
 ICON = 64
 NUM_SIZE, NUM_SCALE = 32, 1.4   # 숫자(1~9) 글자 크기 = 32 × 1.4
@@ -49,12 +53,26 @@ def hex2rgb(h):
     return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
 
 
+def map_files():
+    """[(지역 이름 또는 None(서울), data.json 경로), ...] — 수도권은 assets/map/capital/data.json, 다른 지역은 assets/map/<지역>/data.json"""
+    out = [(None, P("assets", "map", "capital", "data.json"))]   # 수도권(서울) 간판은 station_signs/ 바로 아래
+    base = P("assets", "map")
+    for name in sorted(os.listdir(base)):
+        f = os.path.join(base, name, "data.json")
+        if os.path.isfile(f) and name != "capital":
+            out.append((name, f))
+    return out
+
+
 def load_colors():
-    try:
-        with open(P("assets", "map", "data.json"), encoding="utf-8") as f:
-            return {l["id"]: l["color"] for l in json.load(f)["lines"]}
-    except OSError:
-        return dict(FALLBACK_COLORS)
+    colors = dict(FALLBACK_COLORS)
+    for _, path in map_files():
+        try:
+            with open(path, encoding="utf-8") as f:
+                colors.update({l["id"]: l["color"] for l in json.load(f)["lines"]})
+        except OSError:
+            pass
+    return colors
 
 
 def font(size):
@@ -216,7 +234,7 @@ def make_trains(cfg, colors, icons):
         r = trains["2"].rotate(ang, resample=Image.NEAREST, expand=True)
         pv.paste(r, (36 + base.width + k * 90, y + 28), r)
     pv = pv.resize((pv.width * 2, pv.height * 2), Image.NEAREST)
-    pv.save(P("docs", "train_preview.png"))
+    pv.save(P("docs", "previews", "train_preview.png"))
 
 
 # ---------------- 역 간판 ----------------
@@ -224,7 +242,8 @@ def make_trains(cfg, colors, icons):
 #   lg: 호선 아이콘(64)을 그대로 기호로 씀. 선택 연출·첫 도착 강조용. 양옆에 호선 색 띠(선로).
 #   sm: 높이 24. 지도 위 역 이름 자리용. 띠 없음.
 SHORT = {"arex": "공", "gyeongui": "경", "gyeongchun": "춘", "suinbundang": "분", "shinbundang": "신",
-         "sillim": "림", "ui": "우", "gimpo": "김", "seohae": "서"}
+         "sillim": "림", "ui": "우", "gimpo": "김", "seohae": "서",
+         "incheon1": "인", "incheon2": "인", "bgl": "김"}
 SIGN_LG = {"h": 80, "border": 6, "bar_len": 28, "bar_h": 24, "pad": 2, "gap": 14, "right": 22}
 SIGN_SM = {"h": 24, "border": 2, "badge": 18, "pad": 1, "gap": 4, "right": 7}
 
@@ -375,16 +394,16 @@ def make_sign_sm_transfer(name, tg):
     return im, (bx + D_ // 2, by + D_ // 2)
 
 
-def make_transfer_signs(cfg, colors, D):
+def make_transfer_signs(cfg, colors, D, SG):
     """운행 호선이 2개 이상인 역 → station_signs/{lg,sm}/transfer/{역}.png"""
     enabled = {l["id"] for l in D["lines"] if l["enabled"]}
     tg_lg = make_taegeuk(ICON, 2.2, 4.82)
     tg_sm = make_taegeuk(SIGN_SM["badge"], 1.6, 4.22)
-    os.makedirs(P("assets", "ui", "station_signs"), exist_ok=True)
-    tg_lg.save(P("assets", "ui", "station_signs", "taegeuk_lg.png"))     # 선택 연출(① → 삼태극)용
-    tg_sm.save(P("assets", "ui", "station_signs", "taegeuk_sm.png"))
+    os.makedirs(SG(), exist_ok=True)
+    tg_lg.save(SG("taegeuk_lg.png"))     # 선택 연출(① → 삼태극)용
+    tg_sm.save(SG("taegeuk_sm.png"))
     for size in ("lg", "sm"):
-        os.makedirs(P("assets", "ui", "station_signs", size, "transfer"), exist_ok=True)
+        os.makedirs(SG(size, "transfer"), exist_ok=True)
     out = {}
     for st in D["stations"]:
         ids = [i for i in st["lines"] if i in enabled]
@@ -393,15 +412,18 @@ def make_transfer_signs(cfg, colors, D):
         line_list = [(i, cfg["lines"][i]["label"], hex2rgb(colors.get(i, FALLBACK_COLORS[i]))) for i in ids]
         lg, _ = make_sign_lg_transfer(st["name"], line_list, tg_lg)
         sm, _ = make_sign_sm_transfer(st["name"], tg_sm)
-        lg.save(P("assets", "ui", "station_signs", "lg", "transfer", f"{st['name']}.png"))
-        sm.save(P("assets", "ui", "station_signs", "sm", "transfer", f"{st['name']}.png"))
+        lg.save(SG("lg", "transfer", f"{st['name']}.png"))
+        sm.save(SG("sm", "transfer", f"{st['name']}.png"))
         out[st["name"]] = (lg, sm, ids)
     return out
 
 
-def make_signs(cfg, colors, icons):
+def make_signs(cfg, colors, icons, region=None, data_path=None):
+    """region=None 이면 서울(assets/ui/station_signs/), 아니면 assets/ui/station_signs/<region>/"""
+    SG = (lambda *a: P("assets", "ui", "station_signs", *a)) if region is None else \
+         (lambda *a: P("assets", "ui", "station_signs", region, *a))
     try:
-        with open(P("assets", "map", "data.json"), encoding="utf-8") as f:
+        with open(data_path or P("assets", "map", "data.json"), encoding="utf-8") as f:
             D = json.load(f)
     except OSError:
         print("data.json 없음 — 역 간판은 건너뜀")
@@ -419,20 +441,23 @@ def make_signs(cfg, colors, icons):
                 if n not in stations:
                     stations.append(n)
         for size in ("lg", "sm"):
-            os.makedirs(P("assets", "ui", "station_signs", size, lid), exist_ok=True)
+            os.makedirs(SG(size, lid), exist_ok=True)
         for n in stations:
             lg, lg_c = make_sign_lg(n, names[lid], rgb, icons[lid][0])
             sm, sm_c = make_sign_sm(n, lid, label, rgb)
-            lg.save(P("assets", "ui", "station_signs", "lg", lid, f"{n}.png"))
-            sm.save(P("assets", "ui", "station_signs", "sm", lid, f"{n}.png"))
+            lg.save(SG("lg", lid, f"{n}.png"))
+            sm.save(SG("sm", lid, f"{n}.png"))
             meta["lg"] = {"badge_center": list(lg_c), "badge_size": ICON, "h": lg.height}
             meta["sm"] = {"badge_center": list(sm_c), "badge_size": SIGN_SM["badge"], "h": sm.height}
             samples[(lid, n)] = (lg, sm)
         meta["lines"][lid] = stations
-    transfers = make_transfer_signs(cfg, colors, D)
+    transfers = make_transfer_signs(cfg, colors, D, SG)
     meta["transfer"] = {n: ids for n, (_, _, ids) in transfers.items()}    # {환승역: [운행 호선]}
-    with open(P("assets", "ui", "station_signs", "signs.json"), "w", encoding="utf-8") as f:
+    with open(SG("signs.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=1)
+    if region is not None:                    # 확인용 그림은 서울만
+        print(f"signs[{region}]:", len(samples), "pairs,", len(transfers), "transfer stations")
+        return
 
     # 확인용
     pick_lg = [("1", "서울역"), ("2", "시청"), ("arex", "서울역"), ("gyeongui", "신촌 경의중앙선"),
@@ -482,7 +507,7 @@ def make_signs(cfg, colors, icons):
             pv.paste(sm, (x, y), sm)
             x += sm.width + 10
     pv = pv.crop((0, 0, W, y + 34))
-    pv.save(P("docs", "sign_preview.png"))
+    pv.save(P("docs", "previews", "sign_preview.png"))
     print("signs:", len(samples), "pairs,", len(transfers), "transfer stations")
 
 
@@ -542,10 +567,11 @@ def main():
     pv.paste(icons["arex"][1], (96 + ICON + 16, y - 4), icons["arex"][1])
     pv = pv.crop((0, 0, W, y + ICON + 8))
     make_trains(cfg, colors, icons)
-    make_signs(cfg, colors, icons)
+    for region, path in map_files():          # 서울 + 지역별(assets/map/<지역>/data.json)
+        make_signs(cfg, colors, icons, region, path)
     pv = pv.resize((pv.width * S, pv.height * S), Image.NEAREST)
-    os.makedirs(P("docs"), exist_ok=True)
-    pv.save(P("docs", "line_assets_preview.png"))
+    os.makedirs(P("docs", "previews"), exist_ok=True)
+    pv.save(P("docs", "previews", "line_assets_preview.png"))
     print("done:", len(icons), "icons,", len(tiles), "patterns")
 
 

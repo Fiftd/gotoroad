@@ -17,6 +17,8 @@ LINE_STYLE = {
 LINE_SCALE = 1.6
 CULL = 400
 WHITE = (255,255,255)
+TILE_CACHE = 48            # 메모리에 들고 있을 지도 조각 수
+OVERVIEW_SWITCH = 1.3      # 확대가 (축소 그림 배율 × 이 값)보다 작으면 축소 그림으로 그림
 
 class ManRender:
     def __init__(self, map_data, setting, signs=None):
@@ -29,6 +31,8 @@ class ManRender:
         self._corr, self._corr_key = {}, None   # 나란히 놓기용 구간 표
         self.signs = signs
         self._tg = {}
+        self._loaded = {}                       # 읽어 둔 조각 그림(경로 → Surface)
+        self._ov, self._ov_key = None, None
 
     def set_name(self):
         if not self.setting.districts:
@@ -36,37 +40,72 @@ class ManRender:
         return "tiles-labeled" if self.setting.labels else "tiles"
 
     def tiles(self):
+        """[(x, y, 파일 경로), ...] — 그림은 화면에 보일 때만 읽는다(큰 수도권 지도는 조각이 200개가 넘음)."""
         name = self.set_name()
         if name not in self._sets:
             self._sets.clear()
-            folder = os.path.join(C.MAP_DIR, name)
-            self._sets[name] =[
-                (t["x"], t["y"], pygame.image.load(os.path.join(folder, t["file"])).convert_alpha())
-                for t in self.map.tiles
-            ]
+            self._loaded.clear()
+            folder = os.path.join(self.map.dir, name)
+            self._sets[name] = [(t["x"], t["y"], os.path.join(folder, t["file"])) for t in self.map.tiles]
         return self._sets[name]
-    
-    def _tile_surface(self, i , surf, zoom):
+
+    def _tile(self, path):
+        """조각 그림(최근에 쓴 것만 TILE_CACHE 개 보관)."""
+        surf = self._loaded.pop(path, None)
+        if surf is None:
+            surf = pygame.image.load(path).convert_alpha()
+        self._loaded[path] = surf
+        while len(self._loaded) > TILE_CACHE:
+            self._loaded.pop(next(iter(self._loaded)))
+        return surf
+
+    def _tile_surface(self, path, zoom):
         key = (self.set_name(), round(zoom, 4))
-        if key!=self._scaled_key:
+        if key != self._scaled_key:
             self._scaled, self._scaled_key = {}, key
-        if i not in self._scaled:
-            w = max(1, math.ceil(surf.get_width()* zoom))
-            h = max(1, math.ceil(surf.get_height()*zoom))
-            self._scaled[i] = pygame.transform.scale(surf, (w, h))
-        return self._scaled[i]
-        
+        if path not in self._scaled:
+            surf = self._tile(path)
+            w = max(1, math.ceil(surf.get_width() * zoom))
+            h = max(1, math.ceil(surf.get_height() * zoom))
+            self._scaled[path] = pygame.transform.scale(surf, (w, h))
+        return self._scaled[path]
+
+    def _overview(self):
+        """전체를 줄인 그림(data.json 의 overview) — 멀리서 볼 때 조각 대신 쓴다. 없으면 None."""
+        ov = self.map.overview
+        if not ov:
+            return None
+        name = self.set_name()
+        if self._ov_key != name:
+            path = os.path.join(self.map.dir, ov["files"][name])
+            self._ov = pygame.image.load(path).convert_alpha() if os.path.exists(path) else None
+            self._ov_key = name
+        return self._ov
+
+    def draw_tiles(self, screen, cam):
+        sw, sh = screen.get_size()
+        ov = self._overview()
+        if ov is not None and cam.zoom < self.map.overview["scale"] * OVERVIEW_SWITCH:
+            k = self.map.overview["scale"]
+            x0, y0 = cam.to_world(0, 0)
+            x1, y1 = cam.to_world(sw, sh)
+            r = pygame.Rect(math.floor(x0 * k), math.floor(y0 * k), math.ceil((x1 - x0) * k) + 2, math.ceil((y1 - y0) * k) + 2)
+            r = r.clip(ov.get_rect())
+            if r.w > 0 and r.h > 0:
+                sx, sy = cam.to_screen(r.x / k, r.y / k)
+                size = (max(1, round(r.w / k * cam.zoom)), max(1, round(r.h / k * cam.zoom)))
+                screen.blit(pygame.transform.scale(ov.subsurface(r), size), (round(sx), round(sy)))
+            return
+        tw, th = self.map.tile_w * cam.zoom, self.map.tile_h * cam.zoom
+        for x, y, path in self.tiles():
+            sx, sy = cam.to_screen(x, y)
+            if sx > sw or sy > sh or sx + tw < 0 or sy + th < 0:
+                continue
+            screen.blit(self._tile_surface(path, cam.zoom), (round(sx), round(sy)))
 
     def draw(self, screen, cam, focus=None , start=None):
         screen.fill(BG)
-        sw, sh = screen.get_size()
-        tw, th = self.map.tile_w * cam.zoom, self.map.tile_h*cam.zoom
-
-        for i, (x, y, surf) in enumerate(self.tiles()):
-            sx, sy = cam.to_screen(x, y)
-            if sx > sw or sy > sh or sx + tw < 0 or sy + th <0:
-                continue
-            screen.blit(self._tile_surface(i, surf, cam.zoom), (round(sx), round(sy)))
+        self.draw_tiles(screen, cam)
 
         self.draw_lines(screen, cam, focus)
         stations = self.draw_stations(screen, cam, focus, start)
